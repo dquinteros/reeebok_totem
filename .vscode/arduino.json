@@ -1,0 +1,6 @@
+{
+    "board": "arduino:avr:leonardo",
+    "programmer": "ArduinoISP",
+    "port": "/dev/cu.usbmodemHIDPC1",
+    "sketch": "reebok_totem.ino"
+}
