@@ -8,161 +8,284 @@ created by Ben_Camelo
 #include <Keyboard.h>
 
 // constants
-#define ROUTINE_LENGTH 20
+#define ROUTINE_LENGTH 50
+#define LEDS_POWER 6
+#define UP_PAD_PIN A2    // TOP LEFT + WHITE
+#define DOWN_PAD_PIN A1  // TOP RIGHT + RED
+#define LEFT_PAD_PIN A0  // BOTTOM LEFT + GREEN
+#define RIGHT_PAD_PIN A3 // BOTTOM RIGHT + BLACK
+#define HAND_LEFT_PAD_PIN A4
+#define HAND_RIGHT_PAD_PIN A5
+#define PLAY_PAD_PIN 0
+#define LED_UP_PAD_PIN 1    // TOP LEFT + WHITE
+#define LED_DOWN_PAD_PIN 2  // TOP RIGHT + RED
+#define LED_LEFT_PAD_PIN 4  // BOTTOM LEFT + GREEN
+#define LED_RIGHT_PAD_PIN 7 // BOTTOM RIGHT + BLACK
+#define LED_HAND_LEFT_PAD_PIN 9
+#define LED_HAND_RIGHT_PAD_PIN 12
+#define LED_PLAY_PAD_PIN 8
+#define WELCOME_SCREEN 0
+#define VIDEO_SCREEN 1
+#define INSTRUCTION_SCREEN 2
+#define ROUTINE_SCREEN 3
+#define SCORE_SCREEN 4
+#define TILT 0
+#define INTERCALATED 1
+#define LOOP 2
+#define RANDOM 3
+#define BLINK_TIME 20
 
 // global variables
-char Routine[ROUTINE_LENGTH];
 int pointer = 0;
-bool isRouineActive = false;
-
+int currentScreen = 0;
+char Routine[ROUTINE_LENGTH] = {'w','a','q','w','a','s','a','e','a','d','q','e','d','e','a','d','e','q','s','a','d','q','w'};
+int resetCounter = 0;
+bool buttonPressNoReboundFlag = true;
+int score = 0;
+int animation = TILT;
+int timeout = 0;
+int count = 0;
+int playTime = 100;
+int lightsOn = true;
+int blinkTime = BLINK_TIME;
 /// intialize
-void setup() {
-  Routine[0] = 0;
-  // open the serial port:
+void setup()
+{
+  /* initialize LED OUTPUTS */
+  // Serial Open
   Serial.begin(9600);
-  // initialize control over the keyboard:
-  Keyboard.begin();
-  
-  // initialize LED OUTPUTS
-  
   // LED up
-  pinMode(0, OUTPUT);
-  digitalWrite(0, HIGH);
+  pinMode(LED_UP_PAD_PIN, OUTPUT);
+  digitalWrite(LED_UP_PAD_PIN, LOW);
   // LED down
-  pinMode(1, OUTPUT);
-  digitalWrite(1, HIGH);
+  pinMode(LED_DOWN_PAD_PIN, OUTPUT);
+  digitalWrite(LED_DOWN_PAD_PIN, LOW);
   // LED left
-  pinMode(2, OUTPUT);
-  digitalWrite(2, HIGH);
+  pinMode(LED_LEFT_PAD_PIN, OUTPUT);
+  digitalWrite(LED_LEFT_PAD_PIN, LOW);
   // LED right
-  pinMode(3, OUTPUT);
-  digitalWrite(3, HIGH);
+  pinMode(LED_RIGHT_PAD_PIN, OUTPUT);
+  digitalWrite(LED_RIGHT_PAD_PIN, LOW);
   // LED hand left
-  pinMode(4, OUTPUT);
-  digitalWrite(4, HIGH);
+  pinMode(LED_HAND_LEFT_PAD_PIN, OUTPUT);
+  digitalWrite(LED_HAND_LEFT_PAD_PIN, LOW);
   // LED hand right
-  pinMode(5, OUTPUT);
-  digitalWrite(5, HIGH);
+  pinMode(LED_HAND_RIGHT_PAD_PIN, OUTPUT);
+  digitalWrite(LED_HAND_RIGHT_PAD_PIN, LOW);
   // LED play
-  pinMode(6, OUTPUT);
-  digitalWrite(6, HIGH);
-  
+  pinMode(LED_PLAY_PAD_PIN, OUTPUT);
+  digitalWrite(LED_PLAY_PAD_PIN, LOW);
+
+  /* initialize LED OUTPUTS */
+
   // initialize button pads INPUTS
-  pinMode(7, INPUT_PULLUP); // up
-  pinMode(8, INPUT_PULLUP); // down
-  pinMode(9, INPUT_PULLUP); // left
-  pinMode(10, INPUT_PULLUP); // right
-  pinMode(11, INPUT_PULLUP); // hand left
-  pinMode(12, INPUT_PULLUP); // hand right
-  pinMode(13, INPUT_PULLUP); // play
-  
-  // initialize routine
-  for(int i = 0; i < ROUTINE_LENGTH; i++) {
-    char availableCommands[7] = {'w','a','s','d','q','e','z'};
-        Routine[i] = availableCommands[random(0, 5)];
-  } 
+  pinMode(UP_PAD_PIN, INPUT_PULLUP);         // up
+  pinMode(DOWN_PAD_PIN, INPUT_PULLUP);       // down
+  pinMode(LEFT_PAD_PIN, INPUT_PULLUP);       // left
+  pinMode(RIGHT_PAD_PIN, INPUT_PULLUP);      // right
+  pinMode(HAND_LEFT_PAD_PIN, INPUT_PULLUP);  // hand left
+  pinMode(HAND_RIGHT_PAD_PIN, INPUT_PULLUP); // hand right
+  pinMode(PLAY_PAD_PIN, INPUT_PULLUP);       // play
+
+  pinMode(LEDS_POWER, OUTPUT);
+  digitalWrite(LEDS_POWER, LOW);
 }
 
 /// Activates LED in pad and reads the pad press
-void activatePad(int padPin, int ledPin, char action) {
+void activatePad(int padPin, int ledPin, char action)
+{
   digitalWrite(ledPin, LOW);
-  for (int timer = 0; timer < 20; timer++){
-    if (digitalRead(padPin) == LOW) {
-      Serial.flush();
-      Serial.println("Point");
-      Keyboard.press(action);
-      Keyboard.releaseAll();
-      digitalWrite(ledPin, HIGH);
-      break;
-    }
-    delay(100);
+  if (digitalRead(padPin) == LOW)
+  {
+    Keyboard.press(action);
+    Keyboard.releaseAll();
+    digitalWrite(ledPin, HIGH);
+    score++;
   }
-  Serial.println("Finished Pad");
-  digitalWrite(ledPin, HIGH);
-  delay(500);
+  playTime--;
+}
+
+void turnOn()
+{
+  digitalWrite(LED_UP_PAD_PIN, LOW);
+  digitalWrite(LED_DOWN_PAD_PIN, LOW);
+  digitalWrite(LED_LEFT_PAD_PIN, LOW);
+  digitalWrite(LED_RIGHT_PAD_PIN, LOW);
+  digitalWrite(LED_HAND_LEFT_PAD_PIN, LOW);
+  digitalWrite(LED_HAND_RIGHT_PAD_PIN, LOW);
+  digitalWrite(LED_PLAY_PAD_PIN, LOW);
+}
+
+void turnOff()
+{
+  digitalWrite(LED_UP_PAD_PIN, HIGH);
+  digitalWrite(LED_DOWN_PAD_PIN, HIGH);
+  digitalWrite(LED_LEFT_PAD_PIN, HIGH);
+  digitalWrite(LED_RIGHT_PAD_PIN, HIGH);
+  digitalWrite(LED_HAND_LEFT_PAD_PIN, HIGH);
+  digitalWrite(LED_HAND_RIGHT_PAD_PIN, HIGH);
+  digitalWrite(LED_PLAY_PAD_PIN, HIGH);
+}
+
+/// Activates LED in pad and reads the pad press
+void toggleLeds()
+{
+  blinkTime--;
+  if (blinkTime < 1)
+  {
+    lightsOn = !lightsOn;
+    blinkTime = BLINK_TIME;
+  }
+  if (lightsOn)
+    turnOn();
+  else
+    turnOff();
+}
+
+void toggleLed(int ledPin)
+{
+  blinkTime--;
+  if (blinkTime < 1)
+  {
+    lightsOn = !lightsOn;
+    blinkTime = BLINK_TIME;
+  }
+  if (lightsOn)
+    digitalWrite(ledPin, LOW);
+  else
+    digitalWrite(ledPin, HIGH);
 }
 
 /// main
-void loop() {
-
-    // if up input press w
-  if (digitalRead(7) == LOW && isRouineActive == false) {
-      Keyboard.press('w');
+void loop()
+{
+  delay(10);
+  if (count > 100)
+  {
+    count = 0;
+    //Serial.println(String("Screen: ") + currentScreen);
+  }
+  count++;
+  switch (currentScreen)
+  {
+  case WELCOME_SCREEN:
+    turnOn();
+    toggleLed(LED_PLAY_PAD_PIN);
+    if (digitalRead(PLAY_PAD_PIN) == LOW)
+    {
+      if (buttonPressNoReboundFlag)
+      {
+        Keyboard.press('z');
+        Keyboard.releaseAll();
+        currentScreen = VIDEO_SCREEN;
+        timeout = 1500;
+      }
+      buttonPressNoReboundFlag = false;
+    }
+    else if (digitalRead(PLAY_PAD_PIN) == HIGH)
+    {
+      buttonPressNoReboundFlag = true;
+    }
+    break;
+  case VIDEO_SCREEN:
+    turnOn();
+    timeout--;
+    if (timeout < 2)
+    {
+      Keyboard.press('z');
       Keyboard.releaseAll();
+      currentScreen = INSTRUCTION_SCREEN;
+      timeout = 0;
     }
-      // if down input press s
-  if (digitalRead(8) == LOW && isRouineActive == false) {
-      Keyboard.press('s');
-      Keyboard.releaseAll();
+    break;
+  case INSTRUCTION_SCREEN:
+    turnOn();
+    toggleLed(LED_PLAY_PAD_PIN);
+    if (digitalRead(PLAY_PAD_PIN) == LOW)
+    {
+      if (buttonPressNoReboundFlag)
+      {
+        currentScreen = ROUTINE_SCREEN;
+        turnOff();
+      }
+      buttonPressNoReboundFlag = false;
     }
-      // if play input press a
-  if (digitalRead(9) == LOW && isRouineActive == false) {
-      Keyboard.press('a');
-      Keyboard.releaseAll();
+    else if (digitalRead(PLAY_PAD_PIN) == HIGH)
+    {
+      buttonPressNoReboundFlag = true;
     }
-      // if play input press d
-  if (digitalRead(10) == LOW && isRouineActive == false) {
-      Keyboard.press('d');
-      Keyboard.releaseAll();
-    }
-      // if play input press q
-  if (digitalRead(11) == LOW && isRouineActive == false) {
-      Keyboard.press('q');
-      Keyboard.releaseAll();
-    }
-      // if play input press e
-  if (digitalRead(12) == LOW && isRouineActive == false) {
-      Keyboard.press('e');
-      Keyboard.releaseAll();
-    }
-  // if play input start routine
-  if (digitalRead(13) == LOW && isRouineActive == false) {
-    isRouineActive = true;
-    }
-      
-  // if routine then execute pad
-  if (strlen(Routine) > 0 && isRouineActive == true) {
-    
-    // read next step in routine:
-    char routineChar = Routine[pointer];
-    
+    break;
+  case ROUTINE_SCREEN:
     // select pad
-    switch (routineChar) {
-      case 'w':
-        Serial.println(routineChar);
-        activatePad(5, 3, 'w');
-        break;
-      case 's':
-        Serial.println(routineChar);
-        activatePad(5, 3, 's');
-        break;
-      case 'a':
-        Serial.println(routineChar);
-        activatePad(5, 3, 'a');
-        break;
-      case 'd':
-        Serial.println(routineChar);
-        activatePad(5, 3, 'd');
-        break;
-      case 'q':
-        Serial.println(routineChar);
-        activatePad(5, 3, 'q');
-        break;
-      case 'e':
-        Serial.println(routineChar);
-        activatePad(5, 3, 'e');
-        break;
-      default:
-        Serial.println(routineChar);
-        break;
+    switch (Routine[pointer])
+    {
+    case 'w':
+      activatePad(UP_PAD_PIN, LED_UP_PAD_PIN, 'w');
+      break;
+    case 's':
+      activatePad(DOWN_PAD_PIN, LED_DOWN_PAD_PIN, 's');
+      break;
+    case 'a':
+      activatePad(LEFT_PAD_PIN, LED_LEFT_PAD_PIN, 'a');
+      break;
+    case 'd':
+      activatePad(RIGHT_PAD_PIN, LED_RIGHT_PAD_PIN, 'd');
+      break;
+    case 'q':
+      activatePad(HAND_LEFT_PAD_PIN, LED_HAND_LEFT_PAD_PIN, 'q');
+      break;
+    case 'e':
+      activatePad(HAND_RIGHT_PAD_PIN, LED_HAND_RIGHT_PAD_PIN, 'e');
+      break;
     }
-    pointer++;
-    
+    if (playTime < 1)
+    {
+      pointer++;
+      playTime = 100;
+      turnOff();
+    }
     // if end of routine back to initial state
-    if (Routine[pointer] == '\0') {
-      // memset(Routine, 0, sizeof(integerArray));
+    if (Routine[pointer] == '\0')
+    {
       pointer = 0;
-      isRouineActive = false;
+      currentScreen = SCORE_SCREEN;
+      timeout = 3000;
     }
+    break;
+  case SCORE_SCREEN:
+    Serial.println(score);
+    toggleLeds();
+    if (digitalRead(PLAY_PAD_PIN) == LOW || timeout < 2)
+    {
+      if (buttonPressNoReboundFlag)
+      {
+        currentScreen = WELCOME_SCREEN;
+      }
+      buttonPressNoReboundFlag = false;
+    }
+    else if (digitalRead(PLAY_PAD_PIN) == HIGH)
+      buttonPressNoReboundFlag = true;
+    break;
+  }
+
+  if (digitalRead(PLAY_PAD_PIN) == LOW)
+  {
+    // Serial.print(String("Play"));
+    //Serial.println(resetCounter);
+    resetCounter++;
+    if (resetCounter > 400)
+    {
+      pointer = 0;
+      score = 0;
+      playTime = 100;
+      resetCounter = 0;
+      currentScreen = WELCOME_SCREEN;
+      turnOn();
+      buttonPressNoReboundFlag = false;
+    }
+  }
+  else
+  {
+    resetCounter = 0;
   }
 }
