@@ -29,6 +29,7 @@ created by Ben_Camelo
 #define INSTRUCTION_SCREEN 2
 #define ROUTINE_SCREEN 3
 #define SCORE_SCREEN 4
+#define WAIT_SCREEN 5
 #define TILT 0
 #define INTERCALATED 1
 #define LOOP 2
@@ -38,7 +39,7 @@ created by Ben_Camelo
 // global variables
 int pointer = 0;
 int currentScreen = 0;
-char Routine[ROUTINE_LENGTH] = {'w','a','q','w','a','s','a','e','a','d','q','e','d','e','a','d','e','q','s','a','d','q','w'};
+char Routine[ROUTINE_LENGTH] = {'w','a','q','w','a','s','a','e','a','d','q','e','d','e','a','d','e','q','s','a','d','q','w','a','q','w','a','s','a','e','a','d','q','e','d','e','a','d','e','q','s','a','d','q','w'};
 int resetCounter = 0;
 bool buttonPressNoReboundFlag = true;
 int score = 0;
@@ -192,8 +193,6 @@ void loop()
     timeout--;
     if (timeout < 2)
     {
-      Keyboard.press('z');
-      Keyboard.releaseAll();
       currentScreen = INSTRUCTION_SCREEN;
       timeout = 0;
     }
@@ -205,8 +204,10 @@ void loop()
     {
       if (buttonPressNoReboundFlag)
       {
-        currentScreen = ROUTINE_SCREEN;
-        turnOff();
+        Keyboard.press('z');
+        Keyboard.releaseAll();
+        currentScreen = WAIT_SCREEN;
+        timeout = 600;
       }
       buttonPressNoReboundFlag = false;
     }
@@ -215,7 +216,18 @@ void loop()
       buttonPressNoReboundFlag = true;
     }
     break;
+  case WAIT_SCREEN:
+    turnOn();
+    timeout--;
+    if (timeout < 2)
+    {
+      currentScreen = ROUTINE_SCREEN;
+      turnOff();
+      timeout = 2000;
+    }
+    break;
   case ROUTINE_SCREEN:
+    timeout--;
     // select pad
     switch (Routine[pointer])
     {
@@ -245,20 +257,23 @@ void loop()
       turnOff();
     }
     // if end of routine back to initial state
-    if (Routine[pointer] == '\0')
+    if (Routine[pointer] == '\0' || timeout < 2)
     {
       pointer = 0;
       currentScreen = SCORE_SCREEN;
-      timeout = 3000;
+      timeout = 2000;
     }
     break;
   case SCORE_SCREEN:
-    Serial.println(score);
+    // Serial.println(score);
     toggleLeds();
+    timeout--;
     if (digitalRead(PLAY_PAD_PIN) == LOW || timeout < 2)
     {
       if (buttonPressNoReboundFlag)
       {
+        Keyboard.press('z');
+        Keyboard.releaseAll();
         currentScreen = WELCOME_SCREEN;
       }
       buttonPressNoReboundFlag = false;
@@ -281,6 +296,8 @@ void loop()
       resetCounter = 0;
       currentScreen = WELCOME_SCREEN;
       turnOn();
+      Keyboard.press('r');
+      Keyboard.releaseAll();
       buttonPressNoReboundFlag = false;
     }
   }
